@@ -2,8 +2,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
-import { useToast } from "@/components/ui/use-toast";
-import { ArrowLeft, Save, Import, FileUp, Plus, Eye } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft, Save, Plus, Eye, FileUp, Download } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 const formSchema = z.object({
   title: z.string().min(2, { message: "Title needs at least 2 characters" }),
@@ -42,8 +44,10 @@ const CreateDeck: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isDescriptionOpen, setIsDescriptionOpen] = useState(false);
-  const [isAdvancedMode, setIsAdvancedMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [csvContent, setCsvContent] = useState("");
+  const [csvFile, setCsvFile] = useState<File | null>(null);
 
   // Fetch categories from Supabase
   const { data: categories = [] } = useQuery({
@@ -128,6 +132,94 @@ const CreateDeck: React.FC = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCsvFile(file);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setCsvContent(event.target?.result as string);
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const handleCsvImport = async () => {
+    if (!csvContent) {
+      toast({
+        title: "No data to import",
+        description: "Please upload a CSV file first.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Parse CSV content (simple implementation)
+      const lines = csvContent.split('\n');
+      if (lines.length < 2) {
+        throw new Error("CSV file must contain at least a header row and one data row");
+      }
+
+      // Extract headers and validate format
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const requiredHeaders = ['title', 'description', 'category'];
+      const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+      
+      if (missingHeaders.length > 0) {
+        throw new Error(`CSV is missing required headers: ${missingHeaders.join(', ')}`);
+      }
+      
+      // Get the first data row
+      const firstDataRow = lines[1].split(',').map(cell => cell.trim());
+      const deckData: Record<string, string> = {};
+      
+      headers.forEach((header, index) => {
+        if (index < firstDataRow.length) {
+          deckData[header] = firstDataRow[index];
+        }
+      });
+      
+      // Populate form with data from the first row
+      form.setValue('title', deckData.title || '');
+      form.setValue('description', deckData.description || '');
+      if (deckData.category) {
+        form.setValue('category', deckData.category);
+      }
+      
+      setImportDialogOpen(false);
+      toast({
+        title: "CSV imported",
+        description: "Deck information has been loaded from the CSV file."
+      });
+      
+    } catch (error) {
+      console.error("CSV import error:", error);
+      toast({
+        title: "Import failed",
+        description: error instanceof Error ? error.message : "Invalid CSV format",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const generateCsvTemplate = () => {
+    const headers = "title,description,category,is_public";
+    const example = "My Deck,Description of my deck,language-learning,true";
+    const csvContent = `${headers}\n${example}`;
+    
+    // Create a download link
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('href', url);
+    a.setAttribute('download', 'deck_template.csv');
+    a.click();
+    
+    // Clean up
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -312,25 +404,55 @@ const CreateDeck: React.FC = () => {
         </Card>
 
         {/* Tools */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center">
-            <Button 
-              variant={isAdvancedMode ? "default" : "outline"} 
-              size="sm"
-              onClick={() => setIsAdvancedMode(!isAdvancedMode)}
-              className="mr-2"
-            >
-              {isAdvancedMode ? "Basic" : "Advanced"}
-            </Button>
-          </div>
+        <div className="flex justify-end mb-6">
           <div className="flex space-x-2">
-            <Button variant="outline" size="sm">
-              <Import className="h-4 w-4 mr-2" />
-              Import
-            </Button>
-            <Button variant="outline" size="sm">
-              <FileUp className="h-4 w-4 mr-2" />
-              Export
+            <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <FileUp className="h-4 w-4 mr-2" />
+                  Import CSV
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Import Deck from CSV</DialogTitle>
+                  <DialogDescription>
+                    Upload a CSV file with deck information.
+                    The CSV should have columns for title, description, and category.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="flex items-center gap-4">
+                    <Label htmlFor="csv-file" className="text-right">
+                      CSV File
+                    </Label>
+                    <Input 
+                      id="csv-file"
+                      type="file"
+                      accept=".csv"
+                      onChange={handleFileChange}
+                    />
+                  </div>
+                  <div>
+                    <Button type="button" variant="outline" onClick={generateCsvTemplate} size="sm">
+                      <Download className="h-4 w-4 mr-2" />
+                      Download Template
+                    </Button>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setImportDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="button" onClick={handleCsvImport}>
+                    Import
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Button variant="outline" size="sm" onClick={() => navigate("/categories")}>
+              <Plus className="h-4 w-4 mr-2" />
+              Manage Categories
             </Button>
             <Button variant="outline" size="sm">
               <Eye className="h-4 w-4 mr-2" />
@@ -343,9 +465,9 @@ const CreateDeck: React.FC = () => {
         <Card className="p-6 text-center">
           <h3 className="text-xl font-medium mb-2">Flashcards</h3>
           <p className="text-muted-foreground mb-4">Save the deck first to start adding flashcards</p>
-          <Button variant="outline" className="mx-auto group" disabled>
-            <Plus className="h-5 w-5 mr-2 group-hover:scale-125 transition-transform" />
-            Add new card
+          <Button onClick={form.handleSubmit(handleSubmit)} className="mx-auto">
+            <Save className="h-5 w-5 mr-2" />
+            Save to add cards
           </Button>
         </Card>
       </div>

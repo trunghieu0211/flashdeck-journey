@@ -17,6 +17,7 @@ export interface DeckProps {
 }
 
 const DeckCard: React.FC<DeckProps> = ({
+  id,
   title,
   description,
   cardCount,
@@ -52,15 +53,15 @@ const DeckCard: React.FC<DeckProps> = ({
         </div>
 
         {progress > 0 && (
-          <div className="progress-bar">
+          <div className="w-full bg-gray-200 rounded-full h-1.5 mb-2">
             <div
-              className="progress-bar-fill animate-progress-fill"
+              className="bg-primary h-1.5 rounded-full transition-all duration-500"
               style={{ width: `${progress}%` }}
             ></div>
           </div>
         )}
 
-        {lastStudied && (
+        {lastStudied && lastStudied !== "Never" && (
           <p className="text-xs text-muted-foreground mt-3">
             Last studied: {lastStudied}
           </p>

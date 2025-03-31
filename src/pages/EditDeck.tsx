@@ -1,243 +1,309 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/Layout";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, ArrowLeft, Save, Trash, Edit } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Dummy data for the deck to edit - in real app this would be fetched from API/database
-const mockDeck = {
-  id: "1",
-  title: "Spanish Vocabulary",
-  description: "Essential Spanish words and phrases for beginners",
-  category: "Languages",
-  color: "bg-primary",
-  isPublic: true,
-};
-
-// Mock categories
-const categories = [
-  { id: "languages", name: "Languages" },
-  { id: "science", name: "Science" },
-  { id: "math", name: "Mathematics" },
-  { id: "history", name: "History" },
-  { id: "tech", name: "Technology" },
-  { id: "arts", name: "Arts" },
-];
-
-const colorOptions = [
-  { value: "bg-primary", label: "Blue" },
-  { value: "bg-secondary", label: "Purple" },
-  { value: "bg-green-500", label: "Green" },
-  { value: "bg-red-500", label: "Red" },
-  { value: "bg-yellow-500", label: "Yellow" },
-  { value: "bg-orange-500", label: "Orange" },
-  { value: "bg-pink-500", label: "Pink" },
-];
-
-const deckSchema = z.object({
-  title: z.string().min(2, { message: "Title must be at least 2 characters long" }),
-  description: z.string().min(5, { message: "Description must be at least 5 characters long" }),
-  category: z.string().min(1, { message: "Please select a category" }),
-  color: z.string().min(1, { message: "Please select a color" }),
-  isPublic: z.boolean(),
-});
-
-type DeckFormValues = z.infer<typeof deckSchema>;
+interface Card {
+  id: string;
+  front: string;
+  back: string;
+  example?: string;
+}
 
 const EditDeck: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
+  const [isEditing, setIsEditing] = useState(false);
 
-  const form = useForm<DeckFormValues>({
-    resolver: zodResolver(deckSchema),
-    defaultValues: {
-      title: mockDeck.title,
-      description: mockDeck.description,
-      category: mockDeck.category.toLowerCase(),
-      color: mockDeck.color,
-      isPublic: mockDeck.isPublic,
+  // Fetch deck data
+  const { data: deck, isLoading: isDeckLoading } = useQuery({
+    queryKey: ["deck", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("decks")
+        .select("*")
+        .eq("id", id)
+        .single();
+      
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load deck information",
+          variant: "destructive",
+        });
+        throw error;
+      }
+      
+      return data;
     },
   });
 
-  const onSubmit = async (values: DeckFormValues) => {
+  // Fetch cards for this deck
+  const { data: cards = [], isLoading: isCardsLoading, refetch: refetchCards } = useQuery({
+    queryKey: ["cards", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cards")
+        .select("*")
+        .eq("deck_id", id)
+        .order("created_at");
+      
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load cards",
+          variant: "destructive",
+        });
+        throw error;
+      }
+      
+      return data as Card[];
+    },
+    enabled: !!id,
+  });
+
+  const handleAddCard = () => {
+    // Navigate to card creation page with the deck ID
+    navigate(`/create/card?deckId=${id}`);
+  };
+
+  const handleEditCard = (cardId: string) => {
+    navigate(`/edit/card/${id}/${cardId}`);
+  };
+
+  const handleDeleteCard = async (cardId: string) => {
     try {
-      console.log("Updated deck:", { id, ...values });
+      const { error } = await supabase
+        .from("cards")
+        .delete()
+        .eq("id", cardId);
+      
+      if (error) throw error;
       
       toast({
-        title: "Deck updated successfully!",
-        description: "Your changes have been saved.",
+        title: "Card deleted",
+        description: "The card has been removed from this deck.",
       });
       
-      // Navigate back to dashboard or deck view
-      navigate("/dashboard");
+      refetchCards();
     } catch (error) {
       toast({
-        title: "Failed to update deck",
-        description: "Please try again later.",
+        title: "Error deleting card",
+        description: "There was a problem removing the card.",
         variant: "destructive",
       });
     }
   };
 
+  if (isDeckLoading) {
+    return (
+      <Layout>
+        <div className="container max-w-md mx-auto flex items-center justify-center h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading deck information...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!deck) {
+    return (
+      <Layout>
+        <div className="container max-w-md mx-auto px-4 py-12">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-4">Deck not found</h2>
+            <p className="text-muted-foreground mb-6">This deck doesn't exist or has been deleted.</p>
+            <Button onClick={() => navigate("/dashboard")}>Return to Dashboard</Button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="container max-w-3xl mx-auto px-4 py-6 pb-20">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Edit Deck</h1>
+          <div className="flex items-center">
+            <Button onClick={() => navigate("/dashboard")} variant="ghost" size="icon" className="mr-2">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-2xl font-bold">{isEditing ? "Edit Deck" : deck.title}</h1>
+          </div>
+          {!isEditing ? (
+            <Button onClick={() => setIsEditing(true)} variant="outline">
+              <Edit className="h-4 w-4 mr-2" /> Edit Deck
+            </Button>
+          ) : (
+            <Button onClick={() => setIsEditing(false)} variant="outline">
+              <Save className="h-4 w-4 mr-2" /> Save Changes
+            </Button>
+          )}
         </div>
 
-        <Card>
-          <CardContent className="pt-6">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Deck Title</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter deck title" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Enter a brief description of this deck" 
-                          className="min-h-[100px]"
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormField
-                    control={form.control}
-                    name="category"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Category</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a category" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {categories.map((category) => (
-                              <SelectItem key={category.id} value={category.id}>
-                                {category.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="color"
-                    render={({ field }) => (
-                      <FormItem className="space-y-3">
-                        <FormLabel>Deck Color</FormLabel>
-                        <FormControl>
-                          <RadioGroup
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            className="flex flex-wrap gap-2"
-                          >
-                            {colorOptions.map((color) => (
-                              <FormItem key={color.value} className="flex items-center space-x-1">
-                                <FormControl>
-                                  <RadioGroupItem 
-                                    value={color.value} 
-                                    id={color.value}
-                                    className="sr-only"
-                                  />
-                                </FormControl>
-                                <label
-                                  htmlFor={color.value}
-                                  className={`h-8 w-8 rounded-full cursor-pointer ring-offset-background transition-all hover:scale-110 ${
-                                    field.value === color.value ? "ring-2 ring-ring ring-offset-2" : ""
-                                  } ${color.value}`}
-                                  title={color.label}
-                                />
-                              </FormItem>
-                            ))}
-                          </RadioGroup>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+        {isEditing ? (
+          <Card className="mb-6">
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="title" className="block text-sm font-medium mb-1">
+                    Title
+                  </label>
+                  <Input
+                    id="title"
+                    defaultValue={deck.title}
+                    className="w-full"
                   />
                 </div>
-                
-                <FormField
-                  control={form.control}
-                  name="isPublic"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <input
-                          type="checkbox"
-                          checked={field.value}
-                          onChange={field.onChange}
-                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Make this deck public</FormLabel>
-                        <p className="text-sm text-muted-foreground">
-                          Public decks can be viewed and imported by other users
-                        </p>
+                <div>
+                  <label htmlFor="description" className="block text-sm font-medium mb-1">
+                    Description
+                  </label>
+                  <Textarea
+                    id="description"
+                    defaultValue={deck.description}
+                    className="w-full min-h-[100px]"
+                  />
+                </div>
+                {/* Additional fields can be added here */}
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="mb-6">
+            <CardContent className="pt-6">
+              <p className="text-muted-foreground mb-4">{deck.description}</p>
+              <div className="flex space-x-2 mb-4">
+                <div className="text-sm text-muted-foreground">
+                  <span className="font-medium">Cards:</span> {cards.length}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  <span className="font-medium">Category:</span> {deck.category || "Uncategorized"}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <Tabs defaultValue="cards" className="mb-6">
+          <TabsList>
+            <TabsTrigger value="cards">Cards</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+          </TabsList>
+          <TabsContent value="cards">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Flashcards ({cards.length})</h2>
+              <Button onClick={handleAddCard}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Card
+              </Button>
+            </div>
+
+            {isCardsLoading ? (
+              <div className="py-8 text-center">
+                <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Loading cards...</p>
+              </div>
+            ) : cards.length > 0 ? (
+              <div className="space-y-4">
+                {cards.map((card) => (
+                  <Card key={card.id} className="overflow-hidden">
+                    <CardContent className="p-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <h3 className="text-sm font-medium text-muted-foreground mb-1">Front</h3>
+                          <p className="text-base">{card.front}</p>
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-medium text-muted-foreground mb-1">Back</h3>
+                          <p className="text-base">{card.back}</p>
+                        </div>
                       </div>
-                    </FormItem>
-                  )}
-                />
-                
-                <div className="flex items-center justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => navigate("/dashboard")}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit">Save Changes</Button>
+                      {card.example && (
+                        <div className="mt-3 pt-3 border-t">
+                          <h3 className="text-sm font-medium text-muted-foreground mb-1">Example</h3>
+                          <p className="text-sm">{card.example}</p>
+                        </div>
+                      )}
+                      <div className="flex justify-end mt-3 pt-3 border-t">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleEditCard(card.id)}
+                          className="mr-2"
+                        >
+                          <Edit className="h-4 w-4 mr-1" /> Edit
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleDeleteCard(card.id)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash className="h-4 w-4 mr-1" /> Delete
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 border rounded-lg">
+                <p className="text-muted-foreground mb-4">No cards in this deck yet</p>
+                <Button onClick={handleAddCard}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Your First Card
+                </Button>
+              </div>
+            )}
+          </TabsContent>
+          <TabsContent value="settings">
+            <Card>
+              <CardHeader>
+                <CardTitle>Deck Settings</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Public Deck</label>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={deck.is_public}
+                        className="rounded border-gray-300"
+                      />
+                      <span className="ml-2 text-sm text-muted-foreground">
+                        Make this deck visible to others
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <Button variant="destructive" size="sm">
+                      <Trash className="h-4 w-4 mr-2" />
+                      Delete Deck
+                    </Button>
+                  </div>
                 </div>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        <div className="flex justify-end">
+          <Button onClick={() => navigate(`/study/${id}`)}>Start Study Session</Button>
+        </div>
       </div>
     </Layout>
   );

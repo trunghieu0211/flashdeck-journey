@@ -41,47 +41,43 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
           <div className="flex items-center gap-2">
             {user ? (
-              <>
-                <Button
-                  onClick={() => navigate("/create")}
-                  size="sm"
-                  variant="ghost"
-                  className="md:flex hidden"
-                >
-                  <Plus className="w-4 h-4 mr-2" /> New Deck
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="rounded-full overflow-hidden"
-                    >
-                      <div className="w-8 h-8 flex items-center justify-center bg-primary text-white rounded-full">
-                        {user.email?.charAt(0).toUpperCase() || <User className="w-4 h-4" />}
-                      </div>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>
-                      <div className="font-normal text-sm text-muted-foreground truncate">
-                        {user.email}
-                      </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => navigate("/dashboard")}>
-                      <BookOpen className="mr-2 h-4 w-4" /> My Decks
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/settings")}>
-                      <Settings className="mr-2 h-4 w-4" /> Settings
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut}>
-                      <LogOut className="mr-2 h-4 w-4" /> Sign out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full overflow-hidden"
+                  >
+                    <div className="w-8 h-8 flex items-center justify-center bg-primary text-white rounded-full">
+                      {user.email?.charAt(0).toUpperCase() || <User className="w-4 h-4" />}
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>
+                    <div className="font-normal text-sm text-muted-foreground truncate">
+                      {user.email}
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate("/dashboard")}>
+                    <BookOpen className="mr-2 h-4 w-4" /> My Decks
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/create")}>
+                    <Plus className="mr-2 h-4 w-4" /> Create Deck
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/categories")}>
+                    <BookOpen className="mr-2 h-4 w-4" /> Manage Categories
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/settings")}>
+                    <Settings className="mr-2 h-4 w-4" /> Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" /> Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <>
                 <Button variant="ghost" onClick={() => navigate("/login")}>

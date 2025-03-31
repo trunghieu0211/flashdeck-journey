@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 const StudyDeck: React.FC = () => {
   const navigate = useNavigate();
@@ -95,6 +95,10 @@ const StudyDeck: React.FC = () => {
     navigate("/dashboard");
   };
 
+  const handleAddCards = () => {
+    navigate(`/create/card?deckId=${id}`);
+  };
+
   if (isLoading) {
     return (
       <Layout>
@@ -115,7 +119,7 @@ const StudyDeck: React.FC = () => {
           <div className="text-center">
             <h2 className="text-2xl font-bold mb-4">No cards found</h2>
             <p className="text-muted-foreground mb-6">This deck doesn't have any flashcards yet.</p>
-            <Button onClick={() => navigate(`/edit/deck/${id}`)}>Add Cards to Deck</Button>
+            <Button onClick={handleAddCards}>Add Cards to Deck</Button>
             <Button variant="outline" className="ml-2" onClick={() => navigate("/dashboard")}>
               Return to Dashboard
             </Button>

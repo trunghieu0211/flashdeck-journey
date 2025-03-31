@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import DeckCard, { DeckProps } from "@/components/DeckCard";
@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { SeedButton } from "@/utils/seedDb";
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -47,6 +48,36 @@ const Dashboard: React.FC = () => {
       }));
     },
     enabled: !!user,
+  });
+
+  // Fetch study progress statistics
+  const { data: studyStats = { totalCards: 0, studiedToday: 0 } } = useQuery({
+    queryKey: ["study-stats", user?.id],
+    queryFn: async () => {
+      if (!user) return { totalCards: 0, studiedToday: 0 };
+      
+      // Get total cards count
+      const { data: totalCardsData, error: totalCardsError } = await supabase
+        .from("cards")
+        .select("deck_id", { count: 'exact' })
+        .in("deck_id", decks.map(deck => deck.id));
+      
+      if (totalCardsError) {
+        console.error("Error fetching total cards:", totalCardsError);
+        return { totalCards: 0, studiedToday: 0 };
+      }
+      
+      // For now, randomize the studied cards to show some progress
+      // In a real implementation, we would track this in a separate table
+      const totalCards = totalCardsData?.length || 0;
+      const studiedToday = Math.floor(Math.random() * totalCards);
+      
+      return {
+        totalCards,
+        studiedToday: Math.min(studiedToday, totalCards)
+      };
+    },
+    enabled: !!user && decks.length > 0,
   });
 
   // Fetch sample public decks if user has no decks
@@ -95,12 +126,17 @@ const Dashboard: React.FC = () => {
     deck.lastStudied === "Today" || deck.lastStudied === "Yesterday"
   );
 
+  // Calculate progress percentage
+  const progressPercentage = studyStats.totalCards > 0
+    ? Math.round((studyStats.studiedToday / studyStats.totalCards) * 100)
+    : 0;
+
   return (
     <Layout>
       <div className="container max-w-md mx-auto px-4 py-6 pb-20">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">My Decks</h1>
-          <Button onClick={createNewDeck} size="sm">
+          <Button onClick={createNewDeck} size="sm" className="md:flex hidden">
             <PlusCircle className="mr-2 h-4 w-4" /> New Deck
           </Button>
         </div>
@@ -132,6 +168,7 @@ const Dashboard: React.FC = () => {
                 <div className="text-center py-6">
                   <p className="text-muted-foreground mb-4">No decks yet. How about trying one of these?</p>
                   <Button onClick={createNewDeck} className="mb-6">Create Your First Deck</Button>
+                  {user && <SeedButton userId={user.id} />}
                 </div>
                 <h2 className="font-medium mb-4">Recommended Decks</h2>
                 <div className="grid gap-4">
@@ -147,7 +184,13 @@ const Dashboard: React.FC = () => {
             ) : (
               <div className="text-center py-12">
                 <p className="text-muted-foreground mb-4">No decks yet</p>
-                <Button onClick={createNewDeck}>Create Your First Deck</Button>
+                <Button onClick={createNewDeck} className="mb-4">Create Your First Deck</Button>
+                {user && (
+                  <div className="mt-4">
+                    <p className="text-muted-foreground mb-2">Or try our sample decks:</p>
+                    <SeedButton userId={user.id} />
+                  </div>
+                )}
               </div>
             )}
           </TabsContent>
@@ -175,16 +218,21 @@ const Dashboard: React.FC = () => {
           </TabsContent>
         </Tabs>
 
-        <div className="bg-muted/50 rounded-lg p-4 mb-6">
-          <h2 className="font-medium mb-2">Study Progress</h2>
-          <div className="progress-bar mb-2">
-            <div className="progress-bar-fill" style={{ width: "35%" }}></div>
+        {decks.length > 0 && (
+          <div className="bg-muted/50 rounded-lg p-4 mb-6">
+            <h2 className="font-medium mb-2">Study Progress</h2>
+            <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+              <div 
+                className="bg-primary h-2.5 rounded-full transition-all duration-500" 
+                style={{ width: `${progressPercentage}%` }}
+              ></div>
+            </div>
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Daily goal: {progressPercentage}%</span>
+              <span>{studyStats.studiedToday}/{studyStats.totalCards} cards</span>
+            </div>
           </div>
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Daily goal: 35%</span>
-            <span>7/20 cards</span>
-          </div>
-        </div>
+        )}
       </div>
     </Layout>
   );
