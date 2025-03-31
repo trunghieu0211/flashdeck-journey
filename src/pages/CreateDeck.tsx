@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { useToast } from "@/components/ui/use-toast";
-import { ArrowLeft, Save, Import, Export, Plus, Eye } from "lucide-react";
+import { ArrowLeft, Save, Import, FileUp, Plus, Eye } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -281,7 +281,7 @@ const CreateDeck: React.FC = () => {
               Nhập
             </Button>
             <Button variant="outline" size="sm">
-              <Export className="h-4 w-4 mr-2" />
+              <FileUp className="h-4 w-4 mr-2" />
               Xuất
             </Button>
             <Button variant="outline" size="sm">
