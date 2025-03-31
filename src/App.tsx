@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { ToastProvider } from "@/hooks/use-toast";
 import Welcome from "./pages/Welcome";
 import Dashboard from "./pages/Dashboard";
 import CreateDeck from "./pages/CreateDeck";
@@ -28,41 +29,43 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Welcome />} />
-            
-            {/* Protected routes */}
-            <Route element={<RequireAuth />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/create" element={<CreateDeck />} />
-              <Route path="/create/card" element={<CreateCard />} />
-              <Route path="/create/integrated" element={<IntegratedDeckCreator />} />
-              <Route path="/study/:id" element={<StudyDeck />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/edit/deck/:id" element={<EditDeck />} />
-              <Route path="/edit/card/:deckId/:id" element={<EditCard />} />
-              <Route path="/categories" element={<CategoryManager />} />
-              <Route path="/import" element={<ImportCSV />} />
-            </Route>
-            
-            {/* Auth routes */}
-            <Route path="/signup" element={<SignUp />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/verify-email" element={<VerifyEmail />} />
-            
-            {/* 404 route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+    <ToastProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              <Route path="/" element={<Welcome />} />
+              
+              {/* Protected routes */}
+              <Route element={<RequireAuth />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/create" element={<CreateDeck />} />
+                <Route path="/create/card" element={<CreateCard />} />
+                <Route path="/create/integrated" element={<IntegratedDeckCreator />} />
+                <Route path="/study/:id" element={<StudyDeck />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/edit/deck/:id" element={<EditDeck />} />
+                <Route path="/edit/card/:deckId/:id" element={<EditCard />} />
+                <Route path="/categories" element={<CategoryManager />} />
+                <Route path="/import" element={<ImportCSV />} />
+              </Route>
+              
+              {/* Auth routes */}
+              <Route path="/signup" element={<SignUp />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/verify-email" element={<VerifyEmail />} />
+              
+              {/* 404 route */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ToastProvider>
   </QueryClientProvider>
 );
 
