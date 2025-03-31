@@ -1,12 +1,10 @@
 
 import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/hooks/use-toast";
 import { FcGoogle } from "react-icons/fc";
 import { FaApple, FaFacebook, FaEye, FaEyeSlash } from "react-icons/fa";
 import AuthLayout from "@/components/AuthLayout";
@@ -14,6 +12,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useAuth } from "@/hooks/useAuth";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -25,9 +24,13 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const location = useLocation();
+  const { signIn } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
-  const [loginAttempts, setLoginAttempts] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Get the redirect path from location state, or default to dashboard
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || "/dashboard";
   
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -39,42 +42,15 @@ const Login: React.FC = () => {
   });
 
   const onSubmit = async (values: LoginFormValues) => {
+    setIsLoading(true);
     try {
-      // Here we would normally connect to Supabase or another backend service
-      console.log("Login values:", values);
-      
-      // Simulate login verification
-      if (loginAttempts >= 2) {
-        toast({
-          title: "Account locked",
-          description: "Too many failed attempts. Please reset your password or try again later.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // For demonstration, we'll just navigate to dashboard
-      // In a real app, we'd verify credentials first
-      if (values.email === "demo@example.com" && values.password === "Password123") {
-        toast({
-          title: "Login successful!",
-          description: "Welcome back to FlashDeck.",
-        });
-        navigate("/dashboard");
-      } else {
-        setLoginAttempts(prev => prev + 1);
-        toast({
-          title: "Login failed",
-          description: "Invalid email or password.",
-          variant: "destructive",
-        });
-      }
+      await signIn(values.email, values.password);
+      // Navigate to the previous protected route the user was trying to access
+      navigate(from);
     } catch (error) {
-      toast({
-        title: "Login failed",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      });
+      console.error("Login error:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -124,6 +100,7 @@ const Login: React.FC = () => {
                           type="email"
                           autoComplete="email"
                           {...field}
+                          disabled={isLoading}
                         />
                       </FormControl>
                       <FormMessage />
@@ -152,6 +129,7 @@ const Login: React.FC = () => {
                             type={showPassword ? "text" : "password"}
                             autoComplete="current-password"
                             {...field}
+                            disabled={isLoading}
                           />
                           <Button
                             type="button"
@@ -159,6 +137,7 @@ const Login: React.FC = () => {
                             size="icon"
                             className="absolute right-0 top-0 h-full px-3"
                             onClick={() => setShowPassword(!showPassword)}
+                            disabled={isLoading}
                           >
                             {showPassword ? <FaEyeSlash /> : <FaEye />}
                           </Button>
@@ -178,6 +157,7 @@ const Login: React.FC = () => {
                         <Checkbox
                           checked={field.value}
                           onCheckedChange={field.onChange}
+                          disabled={isLoading}
                         />
                       </FormControl>
                       <div className="space-y-1 leading-none">
@@ -187,8 +167,18 @@ const Login: React.FC = () => {
                   )}
                 />
 
-                <Button type="submit" className="w-full">
-                  Sign in
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <span className="flex items-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Signing in...
+                    </span>
+                  ) : (
+                    "Sign in"
+                  )}
                 </Button>
               </form>
             </Form>

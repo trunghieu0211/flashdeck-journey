@@ -15,35 +15,27 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 const formSchema = z.object({
-  title: z.string().min(2, { message: "Tiêu đề cần ít nhất 2 ký tự" }),
-  description: z.string().min(5, { message: "Mô tả cần ít nhất 5 ký tự" }),
-  category: z.string().min(1, { message: "Vui lòng chọn danh mục" }),
+  title: z.string().min(2, { message: "Title needs at least 2 characters" }),
+  description: z.string().min(5, { message: "Description needs at least 5 characters" }),
+  category: z.string().min(1, { message: "Please select a category" }),
   color: z.string().default("bg-primary"),
   isPublic: z.boolean().default(false),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-// Mock categories
-const categories = [
-  { id: "languages", name: "Ngôn ngữ" },
-  { id: "science", name: "Khoa học" },
-  { id: "math", name: "Toán học" },
-  { id: "history", name: "Lịch sử" },
-  { id: "tech", name: "Công nghệ" },
-  { id: "arts", name: "Nghệ thuật" },
-];
-
 const colorOptions = [
-  { value: "bg-primary", label: "Xanh dương", className: "bg-primary" },
-  { value: "bg-secondary", label: "Tím", className: "bg-secondary" },
-  { value: "bg-green-500", label: "Xanh lá", className: "bg-green-500" },
-  { value: "bg-red-500", label: "Đỏ", className: "bg-red-500" },
-  { value: "bg-yellow-500", label: "Vàng", className: "bg-yellow-500" },
-  { value: "bg-orange-500", label: "Cam", className: "bg-orange-500" },
-  { value: "bg-pink-500", label: "Hồng", className: "bg-pink-500" },
+  { value: "bg-primary", label: "Blue", className: "bg-primary" },
+  { value: "bg-secondary", label: "Purple", className: "bg-secondary" },
+  { value: "bg-green-500", label: "Green", className: "bg-green-500" },
+  { value: "bg-red-500", label: "Red", className: "bg-red-500" },
+  { value: "bg-yellow-500", label: "Yellow", className: "bg-yellow-500" },
+  { value: "bg-orange-500", label: "Orange", className: "bg-orange-500" },
+  { value: "bg-pink-500", label: "Pink", className: "bg-pink-500" },
 ];
 
 const CreateDeck: React.FC = () => {
@@ -52,6 +44,23 @@ const CreateDeck: React.FC = () => {
   const [isDescriptionOpen, setIsDescriptionOpen] = useState(false);
   const [isAdvancedMode, setIsAdvancedMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Fetch categories from Supabase
+  const { data: categories = [] } = useQuery({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .order("name");
+      
+      if (error) {
+        console.error("Error fetching categories:", error);
+        return [];
+      }
+      return data || [];
+    }
+  });
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -70,16 +79,55 @@ const CreateDeck: React.FC = () => {
     setIsSaving(true);
     console.log("Creating deck:", values);
     
-    // Giả lập thời gian xử lý
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    toast({
-      title: "Thành công!",
-      description: "Bộ thẻ mới đã được tạo.",
-    });
-    
-    setIsSaving(false);
-    navigate("/dashboard");
+    try {
+      // Check if user is authenticated
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to save your deck.",
+          variant: "destructive",
+        });
+        setIsSaving(false);
+        navigate("/login");
+        return;
+      }
+      
+      // Insert deck into Supabase
+      const { data, error } = await supabase
+        .from("decks")
+        .insert({
+          title: values.title,
+          description: values.description,
+          category: values.category,
+          color: values.color,
+          is_public: values.isPublic,
+          user_id: user.id
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Success!",
+        description: "Your new deck has been created.",
+      });
+      
+      navigate(`/edit/deck/${data.id}`);
+    } catch (error) {
+      console.error("Error creating deck:", error);
+      toast({
+        title: "Failed to save deck",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -96,7 +144,7 @@ const CreateDeck: React.FC = () => {
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold">Tạo bộ thẻ mới</h1>
+            <h1 className="text-2xl font-bold">Create New Deck</h1>
           </div>
           <Button 
             onClick={form.handleSubmit(handleSubmit)} 
@@ -109,12 +157,12 @@ const CreateDeck: React.FC = () => {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Đang lưu
+                Saving
               </span>
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                Lưu
+                Save
               </>
             )}
           </Button>
@@ -124,7 +172,7 @@ const CreateDeck: React.FC = () => {
           <CardContent className="p-6">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-                {/* Tiêu đề */}
+                {/* Title */}
                 <FormField
                   control={form.control}
                   name="title"
@@ -132,7 +180,7 @@ const CreateDeck: React.FC = () => {
                     <FormItem>
                       <FormControl>
                         <Input 
-                          placeholder="Nhập tiêu đề hấp dẫn cho bộ thẻ của bạn..." 
+                          placeholder="Enter an engaging title for your deck..." 
                           className="text-2xl font-bold border-0 border-b-2 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary"
                           {...field} 
                         />
@@ -142,11 +190,11 @@ const CreateDeck: React.FC = () => {
                   )}
                 />
                 
-                {/* Mô tả */}
+                {/* Description */}
                 <Collapsible open={isDescriptionOpen} onOpenChange={setIsDescriptionOpen}>
                   <CollapsibleTrigger asChild>
                     <div className="flex items-center cursor-pointer text-sm text-muted-foreground hover:text-foreground">
-                      <span>{isDescriptionOpen ? "Thu gọn mô tả" : "Thêm mô tả"}</span>
+                      <span>{isDescriptionOpen ? "Hide description" : "Add description"}</span>
                       <svg 
                         xmlns="http://www.w3.org/2000/svg" 
                         width="16" 
@@ -171,7 +219,7 @@ const CreateDeck: React.FC = () => {
                         <FormItem>
                           <FormControl>
                             <Textarea 
-                              placeholder="Mô tả ngắn gọn về bộ thẻ này..." 
+                              placeholder="Briefly describe what this deck is about..." 
                               className="min-h-[100px] resize-y"
                               {...field} 
                             />
@@ -184,17 +232,17 @@ const CreateDeck: React.FC = () => {
                 </Collapsible>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Danh mục */}
+                  {/* Category */}
                   <FormField
                     control={form.control}
                     name="category"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Danh mục</FormLabel>
+                        <FormLabel>Category</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Chọn danh mục" />
+                              <SelectValue placeholder="Select a category" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -210,13 +258,13 @@ const CreateDeck: React.FC = () => {
                     )}
                   />
                   
-                  {/* Màu sắc */}
+                  {/* Color */}
                   <FormField
                     control={form.control}
                     name="color"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Màu sắc</FormLabel>
+                        <FormLabel>Color</FormLabel>
                         <div className="flex flex-wrap gap-2">
                           {colorOptions.map((color) => (
                             <div 
@@ -235,7 +283,7 @@ const CreateDeck: React.FC = () => {
                   />
                 </div>
 
-                {/* Chế độ hiển thị */}
+                {/* Visibility */}
                 <FormField
                   control={form.control}
                   name="isPublic"
@@ -250,9 +298,9 @@ const CreateDeck: React.FC = () => {
                         />
                       </FormControl>
                       <div className="space-y-1 leading-none">
-                        <FormLabel>Công khai</FormLabel>
+                        <FormLabel>Public</FormLabel>
                         <p className="text-sm text-muted-foreground">
-                          Cho phép người khác xem và sao chép bộ thẻ này
+                          Allow others to view and copy this deck
                         </p>
                       </div>
                     </FormItem>
@@ -263,7 +311,7 @@ const CreateDeck: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Công cụ */}
+        {/* Tools */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center">
             <Button 
@@ -272,32 +320,32 @@ const CreateDeck: React.FC = () => {
               onClick={() => setIsAdvancedMode(!isAdvancedMode)}
               className="mr-2"
             >
-              {isAdvancedMode ? "Cơ bản" : "Nâng cao"}
+              {isAdvancedMode ? "Basic" : "Advanced"}
             </Button>
           </div>
           <div className="flex space-x-2">
             <Button variant="outline" size="sm">
               <Import className="h-4 w-4 mr-2" />
-              Nhập
+              Import
             </Button>
             <Button variant="outline" size="sm">
               <FileUp className="h-4 w-4 mr-2" />
-              Xuất
+              Export
             </Button>
             <Button variant="outline" size="sm">
               <Eye className="h-4 w-4 mr-2" />
-              Xem trước
+              Preview
             </Button>
           </div>
         </div>
 
-        {/* Phần Card - Hiện tại chỉ hiển thị thông báo */}
+        {/* Cards section - Placeholder */}
         <Card className="p-6 text-center">
-          <h3 className="text-xl font-medium mb-2">Thẻ học</h3>
-          <p className="text-muted-foreground mb-4">Lưu bộ thẻ trước để bắt đầu thêm thẻ học</p>
+          <h3 className="text-xl font-medium mb-2">Flashcards</h3>
+          <p className="text-muted-foreground mb-4">Save the deck first to start adding flashcards</p>
           <Button variant="outline" className="mx-auto group" disabled>
             <Plus className="h-5 w-5 mr-2 group-hover:scale-125 transition-transform" />
-            Thêm thẻ học mới
+            Add new card
           </Button>
         </Card>
       </div>

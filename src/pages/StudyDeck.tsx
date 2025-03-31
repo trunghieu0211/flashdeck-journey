@@ -1,49 +1,72 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import Layout from "@/components/Layout";
 import Flashcard, { FlashcardProps } from "@/components/Flashcard";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 const StudyDeck: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-
-  // Mock data
-  const [deck] = useState({
-    id: id || "1",
-    title: "Spanish Vocabulary",
-    description: "Essential Spanish words and phrases for beginners",
-    category: "Languages",
-  });
-
-  const [cards] = useState<FlashcardProps[]>([
-    {
-      id: "card1",
-      front: "¿Cómo estás?",
-      back: "How are you?",
-      example: "¿Cómo estás hoy? (How are you today?)",
-    },
-    {
-      id: "card2",
-      front: "Buenos días",
-      back: "Good morning",
-      example: "Buenos días, ¿cómo amaneciste? (Good morning, how did you wake up?)",
-    },
-    {
-      id: "card3",
-      front: "Gracias",
-      back: "Thank you",
-      example: "Muchas gracias por tu ayuda. (Thank you very much for your help.)",
-    },
-  ]);
-
+  const { toast } = useToast();
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [cardStates, setCardStates] = useState<Record<string, { difficulty?: string }>>({});
   const [sessionCompleted, setSessionCompleted] = useState(false);
+
+  // Fetch deck data
+  const { data: deck, isLoading: isDeckLoading } = useQuery({
+    queryKey: ["deck", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("decks")
+        .select("*")
+        .eq("id", id)
+        .single();
+      
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load deck information",
+          variant: "destructive",
+        });
+        throw error;
+      }
+      
+      return data;
+    },
+  });
+
+  // Fetch cards for this deck
+  const { data: cards = [], isLoading: isCardsLoading } = useQuery({
+    queryKey: ["cards", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cards")
+        .select("*")
+        .eq("deck_id", id)
+        .order("created_at");
+      
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load flashcards",
+          variant: "destructive",
+        });
+        throw error;
+      }
+      
+      return data as FlashcardProps[];
+    },
+    enabled: !!id,
+  });
+
+  const isLoading = isDeckLoading || isCardsLoading;
 
   const handlePrevious = () => {
     if (currentCardIndex > 0) {
@@ -60,15 +83,47 @@ const StudyDeck: React.FC = () => {
   };
 
   const handleDifficultySelect = (difficulty: string) => {
-    setCardStates({
-      ...cardStates,
-      [cards[currentCardIndex].id]: { difficulty },
-    });
+    if (cards[currentCardIndex]) {
+      setCardStates({
+        ...cardStates,
+        [cards[currentCardIndex].id]: { difficulty },
+      });
+    }
   };
 
   const handleFinishSession = () => {
     navigate("/dashboard");
   };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="container max-w-md mx-auto flex items-center justify-center h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading flashcards...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!deck || cards.length === 0) {
+    return (
+      <Layout>
+        <div className="container max-w-md mx-auto px-4 py-12">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-4">No cards found</h2>
+            <p className="text-muted-foreground mb-6">This deck doesn't have any flashcards yet.</p>
+            <Button onClick={() => navigate(`/edit/deck/${id}`)}>Add Cards to Deck</Button>
+            <Button variant="outline" className="ml-2" onClick={() => navigate("/dashboard")}>
+              Return to Dashboard
+            </Button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   const currentCard = cards[currentCardIndex];
   const progress = ((currentCardIndex + 1) / cards.length) * 100;
@@ -80,7 +135,7 @@ const StudyDeck: React.FC = () => {
           <button onClick={() => navigate("/dashboard")} className="text-muted-foreground">
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-xl font-semibold">{deck.title}</h1>
+          <h1 className="text-xl font-semibold">{deck?.title}</h1>
           <div className="w-5"></div> {/* Placeholder for alignment */}
         </div>
 

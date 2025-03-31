@@ -6,42 +6,81 @@ import DeckCard, { DeckProps } from "@/components/DeckCard";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  
+  // Fetch user decks from Supabase
+  const { data: decks = [], isLoading } = useQuery({
+    queryKey: ["decks", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      // Fetch user's decks
+      const { data: userDecks, error: userDecksError } = await supabase
+        .from("decks")
+        .select(`
+          *,
+          cards:cards(count)
+        `)
+        .eq("user_id", user.id);
+      
+      if (userDecksError) {
+        console.error("Error fetching user decks:", userDecksError);
+        return [];
+      }
+      
+      // Transform data to match DeckProps
+      return userDecks.map(deck => ({
+        id: deck.id,
+        title: deck.title,
+        description: deck.description || "",
+        cardCount: deck.cards?.[0]?.count || 0,
+        progress: 0, // We'll implement progress tracking later
+        category: deck.category || "Uncategorized",
+        color: deck.color,
+        lastStudied: "Never", // This will be updated later
+      }));
+    },
+    enabled: !!user,
+  });
 
-  // Mock data for demonstration
-  const [decks] = useState<DeckProps[]>([
-    {
-      id: "1",
-      title: "Spanish Vocabulary",
-      description: "Essential Spanish words and phrases for beginners",
-      cardCount: 50,
-      progress: 25,
-      category: "Languages",
-      lastStudied: "Today",
+  // Fetch sample public decks if user has no decks
+  const { data: publicDecks = [] } = useQuery({
+    queryKey: ["public-decks"],
+    queryFn: async () => {
+      if (decks.length > 0) return [];
+      
+      const { data, error } = await supabase
+        .from("decks")
+        .select(`
+          *,
+          cards:cards(count)
+        `)
+        .eq("is_public", true)
+        .limit(3);
+      
+      if (error) {
+        console.error("Error fetching public decks:", error);
+        return [];
+      }
+      
+      return data.map(deck => ({
+        id: deck.id,
+        title: deck.title,
+        description: deck.description || "",
+        cardCount: deck.cards?.[0]?.count || 0,
+        progress: 0,
+        category: deck.category || "Uncategorized",
+        color: deck.color,
+        lastStudied: "Never",
+      }));
     },
-    {
-      id: "2",
-      title: "JavaScript Fundamentals",
-      description: "Core concepts of JavaScript programming language",
-      cardCount: 30,
-      progress: 70,
-      category: "Technology",
-      color: "bg-secondary",
-      lastStudied: "Yesterday",
-    },
-    {
-      id: "3",
-      title: "World Capitals",
-      description: "Capitals of countries around the world",
-      cardCount: 195,
-      progress: 10,
-      category: "Geography",
-      color: "bg-green-500",
-      lastStudied: "3 days ago",
-    },
-  ]);
+  });
 
   const handleDeckClick = (id: string) => {
     navigate(`/study/${id}`);
@@ -50,6 +89,11 @@ const Dashboard: React.FC = () => {
   const createNewDeck = () => {
     navigate("/create");
   };
+
+  // Filter decks for tabs
+  const recentDecks = decks.filter(deck => 
+    deck.lastStudied === "Today" || deck.lastStudied === "Yesterday"
+  );
 
   return (
     <Layout>
@@ -68,7 +112,12 @@ const Dashboard: React.FC = () => {
             <TabsTrigger value="favorites">Favorites</TabsTrigger>
           </TabsList>
           <TabsContent value="all">
-            {decks.length > 0 ? (
+            {isLoading ? (
+              <div className="py-8 text-center">
+                <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Loading your decks...</p>
+              </div>
+            ) : decks.length > 0 ? (
               <div className="grid gap-4">
                 {decks.map((deck) => (
                   <DeckCard
@@ -78,6 +127,23 @@ const Dashboard: React.FC = () => {
                   />
                 ))}
               </div>
+            ) : publicDecks.length > 0 ? (
+              <>
+                <div className="text-center py-6">
+                  <p className="text-muted-foreground mb-4">No decks yet. How about trying one of these?</p>
+                  <Button onClick={createNewDeck} className="mb-6">Create Your First Deck</Button>
+                </div>
+                <h2 className="font-medium mb-4">Recommended Decks</h2>
+                <div className="grid gap-4">
+                  {publicDecks.map((deck) => (
+                    <DeckCard
+                      key={deck.id}
+                      {...deck}
+                      onClick={() => handleDeckClick(deck.id)}
+                    />
+                  ))}
+                </div>
+              </>
             ) : (
               <div className="text-center py-12">
                 <p className="text-muted-foreground mb-4">No decks yet</p>
@@ -86,17 +152,21 @@ const Dashboard: React.FC = () => {
             )}
           </TabsContent>
           <TabsContent value="recent">
-            <div className="grid gap-4">
-              {decks
-                .filter((deck) => deck.lastStudied === "Today" || deck.lastStudied === "Yesterday")
-                .map((deck) => (
+            {recentDecks.length > 0 ? (
+              <div className="grid gap-4">
+                {recentDecks.map((deck) => (
                   <DeckCard
                     key={deck.id}
                     {...deck}
                     onClick={() => handleDeckClick(deck.id)}
                   />
                 ))}
-            </div>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">No recently studied decks</p>
+              </div>
+            )}
           </TabsContent>
           <TabsContent value="favorites">
             <div className="text-center py-12">

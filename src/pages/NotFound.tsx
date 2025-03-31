@@ -13,7 +13,14 @@ const NotFound: React.FC = () => {
         <p className="text-xl text-muted-foreground mb-6">
           Oops! We couldn't find that page.
         </p>
-        <Button onClick={() => navigate("/dashboard")}>Return to Dashboard</Button>
+        <div className="space-y-2">
+          <Button onClick={() => navigate("/dashboard")} className="w-full">
+            Return to Dashboard
+          </Button>
+          <Button onClick={() => navigate("/")} variant="outline" className="w-full">
+            Return to Home
+          </Button>
+        </div>
       </div>
     </div>
   );
