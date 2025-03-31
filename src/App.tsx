@@ -11,6 +11,16 @@ import CreateCard from "./pages/CreateCard";
 import StudyDeck from "./pages/StudyDeck";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import SignUp from "./pages/SignUp";
+import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import VerifyEmail from "./pages/VerifyEmail";
+import EditDeck from "./pages/EditDeck";
+import EditCard from "./pages/EditCard";
+import CategoryManager from "./pages/CategoryManager";
+import IntegratedDeckCreator from "./pages/IntegratedDeckCreator";
+import ImportCSV from "./pages/ImportCSV";
 
 const queryClient = new QueryClient();
 
@@ -25,8 +35,18 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/create" element={<CreateDeck />} />
           <Route path="/create/card" element={<CreateCard />} />
+          <Route path="/create/integrated" element={<IntegratedDeckCreator />} />
           <Route path="/study/:id" element={<StudyDeck />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/edit/deck/:id" element={<EditDeck />} />
+          <Route path="/edit/card/:deckId/:id" element={<EditCard />} />
+          <Route path="/categories" element={<CategoryManager />} />
+          <Route path="/import" element={<ImportCSV />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
