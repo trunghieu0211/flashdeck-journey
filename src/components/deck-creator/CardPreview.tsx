@@ -16,6 +16,7 @@ interface CardPreviewProps {
   togglePreview: () => void;
   onSubmit: (values: DeckFormValues) => Promise<void>;
   selectedColor: string;
+  setCurrentCardIndex: (index: number) => void;
 }
 
 const CardPreview: React.FC<CardPreviewProps> = ({
@@ -29,6 +30,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({
   togglePreview,
   onSubmit,
   selectedColor,
+  setCurrentCardIndex,
 }) => {
   return (
     <div className="flex flex-col items-center justify-center py-10">
@@ -79,7 +81,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({
               className={`inline-block w-2 h-2 mx-1 rounded-full cursor-pointer ${
                 index === currentCardIndex ? selectedColor : "bg-gray-300"
               }`}
-              onClick={() => form.setValue("currentCardIndex", index)}
+              onClick={() => setCurrentCardIndex(index)}
             />
           ))}
         </div>

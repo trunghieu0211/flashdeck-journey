@@ -51,6 +51,7 @@ const CardsTabContent: React.FC<CardsTabContentProps> = ({
       <CardPreview 
         form={form}
         currentCardIndex={currentCardIndex}
+        setCurrentCardIndex={setCurrentCardIndex}
         fields={fields}
         flipped={flipped}
         setFlipped={setFlipped}
