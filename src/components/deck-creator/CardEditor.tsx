@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, Bold, Italic, Underline, Image, Code, AlignLeft } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bold, Italic, Underline, Image, Code, AlignLeft, Eye } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
 import { DeckFormValues } from "@/schemas/deckSchema";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,7 +32,7 @@ const CardEditor: React.FC<CardEditorProps> = ({
   const formatText = (formatType: string) => {
     // This is a simplified example - a real implementation would use a proper rich text editor
     const field = `cards.${currentCardIndex}.front`;
-    const currentValue = form.getValues(field) as string;
+    const currentValue = form.getValues(`cards.${currentCardIndex}.front`) as string;
     
     let formattedText = currentValue;
     switch (formatType) {
@@ -50,17 +50,17 @@ const CardEditor: React.FC<CardEditorProps> = ({
         break;
     }
     
-    form.setValue(field, formattedText);
+    form.setValue(`cards.${currentCardIndex}.front`, formattedText);
   };
   
   const addImage = () => {
     if (!imageUrl) return;
     
     const field = `cards.${currentCardIndex}.front`;
-    const currentValue = form.getValues(field) as string;
+    const currentValue = form.getValues(`cards.${currentCardIndex}.front`) as string;
     const imageMarkdown = `\n![image](${imageUrl})\n`;
     
-    form.setValue(field, currentValue + imageMarkdown);
+    form.setValue(`cards.${currentCardIndex}.front`, currentValue + imageMarkdown);
     setImageUrl("");
   };
 
