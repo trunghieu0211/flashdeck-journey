@@ -32,10 +32,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     // Check for auth parameters in URL
     const handleAuthRedirect = async () => {
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const accessToken = hashParams.get("access_token");
-      
-      if (accessToken) {
+      // Handle hash params (from email auth, OAuth, etc.)
+      if (window.location.hash.includes("access_token")) {
         try {
           // Get the session using the access token
           const { data, error } = await supabase.auth.getSession();
@@ -54,7 +52,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               description: "You have been successfully authenticated.",
             });
             
-            navigate("/dashboard");
+            // Wait a moment to allow the auth state to update
+            setTimeout(() => {
+              navigate("/dashboard");
+            }, 500);
           }
         } catch (error) {
           console.error("Authentication error:", error);

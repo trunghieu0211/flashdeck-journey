@@ -135,6 +135,15 @@ const CreateCard: React.FC = () => {
     setFlipped(false);
   };
 
+  // Fixed the navigation by ensuring we only navigate to a valid string path
+  const handleGoBack = () => {
+    if (deckId) {
+      navigate(`/edit/deck/${deckId}`);
+    } else {
+      navigate(-1); // This is a number, which is valid
+    }
+  };
+
   return (
     <Layout>
       <div className="container max-w-3xl mx-auto px-4 py-6 pb-20">
@@ -142,7 +151,7 @@ const CreateCard: React.FC = () => {
         <div className="flex justify-between items-center mb-6 sticky top-0 z-10 bg-background pb-4 border-b">
           <div className="flex items-center">
             <Button 
-              onClick={() => navigate(deckId ? `/edit/deck/${deckId}` : -1)} 
+              onClick={handleGoBack} 
               variant="ghost" 
               size="icon"
               className="mr-2"
@@ -316,7 +325,7 @@ const CreateCard: React.FC = () => {
           <Button 
             type="button" 
             variant="outline" 
-            onClick={() => navigate(deckId ? `/edit/deck/${deckId}` : -1)}
+            onClick={handleGoBack} 
             className="mr-2"
           >
             Cancel

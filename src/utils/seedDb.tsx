@@ -76,6 +76,11 @@ const sampleDecks = [
 ];
 
 const seedDatabase = async (userId: string) => {
+  if (!userId) {
+    console.error("Cannot seed database: No user ID provided");
+    return false;
+  }
+  
   console.log("Starting database seeding...");
   
   // First, create categories if they don't exist
@@ -158,6 +163,15 @@ export const SeedButton = ({ userId }: { userId: string }) => {
   const [isSeeding, setIsSeeding] = useState(false);
   
   const handleSeed = async () => {
+    if (!userId) {
+      toast({
+        title: "Not logged in",
+        description: "Please sign up or log in first to create sample decks.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsSeeding(true);
     try {
       await seedDatabase(userId);
@@ -178,7 +192,7 @@ export const SeedButton = ({ userId }: { userId: string }) => {
   };
   
   return (
-    <Button onClick={handleSeed} disabled={isSeeding}>
+    <Button onClick={handleSeed} disabled={isSeeding || !userId}>
       {isSeeding ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />

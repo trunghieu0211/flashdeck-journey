@@ -82,7 +82,8 @@ const Welcome: React.FC = () => {
             <p className="mb-6 text-muted-foreground">
               Want to try out the app with pre-made content? Add some sample decks with one click.
             </p>
-            <SeedButton />
+            {/* Pass an empty string when no user is logged in on the welcome page */}
+            <SeedButton userId="" />
           </div>
         </div>
       </div>
