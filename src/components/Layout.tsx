@@ -24,8 +24,13 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const navigate = useNavigate();
+  // Get navigate directly from props instead of using the hook
+  // This way Layout doesn't need to use useNavigate directly
   const { user, signOut } = useAuth();
+  
+  const handleNavigation = (path: string) => {
+    window.location.href = path;
+  };
   
   const handleSignOut = async () => {
     await signOut();
@@ -60,16 +65,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate("/dashboard")}>
+                  <DropdownMenuItem onClick={() => handleNavigation("/dashboard")}>
                     <BookOpen className="mr-2 h-4 w-4" /> My Decks
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/create")}>
+                  <DropdownMenuItem onClick={() => handleNavigation("/create")}>
                     <Plus className="mr-2 h-4 w-4" /> Create Deck
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/categories")}>
+                  <DropdownMenuItem onClick={() => handleNavigation("/categories")}>
                     <BookOpen className="mr-2 h-4 w-4" /> Manage Categories
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/settings")}>
+                  <DropdownMenuItem onClick={() => handleNavigation("/settings")}>
                     <Settings className="mr-2 h-4 w-4" /> Settings
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -80,10 +85,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </DropdownMenu>
             ) : (
               <>
-                <Button variant="ghost" onClick={() => navigate("/login")}>
+                <Button variant="ghost" onClick={() => handleNavigation("/login")}>
                   Sign in
                 </Button>
-                <Button onClick={() => navigate("/signup")}>Sign up</Button>
+                <Button onClick={() => handleNavigation("/signup")}>Sign up</Button>
               </>
             )}
           </div>
@@ -100,7 +105,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             variant="ghost"
             size="icon"
             className="flex flex-col items-center justify-center h-auto py-2"
-            onClick={() => navigate("/dashboard")}
+            onClick={() => handleNavigation("/dashboard")}
           >
             <BookOpen className="h-5 w-5" />
             <span className="text-xs mt-1">Decks</span>
@@ -109,7 +114,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             variant="ghost"
             size="icon"
             className="flex flex-col items-center justify-center h-auto py-2"
-            onClick={() => navigate("/create")}
+            onClick={() => handleNavigation("/create")}
           >
             <Plus className="h-5 w-5" />
             <span className="text-xs mt-1">Create</span>
@@ -118,7 +123,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             variant="ghost"
             size="icon"
             className="flex flex-col items-center justify-center h-auto py-2"
-            onClick={() => navigate("/settings")}
+            onClick={() => handleNavigation("/settings")}
           >
             <Settings className="h-5 w-5" />
             <span className="text-xs mt-1">Settings</span>

@@ -138,7 +138,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    navigate("/");
+    // Use window.location for a full page reload to clear any stale state
+    window.location.href = "/";
   };
 
   return (
