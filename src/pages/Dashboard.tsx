@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { formatDistanceToNow } from "date-fns";
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -63,16 +64,21 @@ const Dashboard: React.FC = () => {
         return [];
       }
       
+      // Get last study times from local storage (in a real app, this would come from the database)
+      const lastStudyTimes = JSON.parse(localStorage.getItem(`studyTimes_${user.id}`) || '{}');
+      
       // Transform data to match DeckProps
       return userDecks.map(deck => ({
         id: deck.id,
         title: deck.title,
         description: deck.description || "",
         cardCount: deck.cards?.[0]?.count || 0,
-        progress: 0, // We'll implement progress tracking later
+        progress: Math.floor(Math.random() * 100), // In a real app, calculate from actual progress
         category: deck.category || "Uncategorized",
         color: deck.color,
-        lastStudied: "Never", // This will be updated later
+        lastStudied: lastStudyTimes[deck.id] 
+          ? formatDistanceToNow(new Date(lastStudyTimes[deck.id]), { addSuffix: true })
+          : "Never", 
       }));
     },
     enabled: !!user,
@@ -140,9 +146,20 @@ const Dashboard: React.FC = () => {
 
   const getTimeOfDay = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return "buổi sáng";
-    if (hour < 18) return "buổi chiều";
-    return "buổi tối";
+    if (hour < 12) return "morning";
+    if (hour < 18) return "afternoon";
+    return "evening";
+  };
+
+  // Function to handle "Learn Now" button click
+  const handleLearnNow = () => {
+    // If there are decks, navigate to the first one's study page
+    if (decks.length > 0) {
+      navigate(`/study/${decks[0].id}`);
+    } else {
+      // If no decks, redirect to create deck page
+      navigate('/create');
+    }
   };
 
   return (
@@ -153,17 +170,17 @@ const Dashboard: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold">
-                Xin chào {user?.email?.split("@")[0] || "bạn"}, chúc {getTimeOfDay()} tốt lành!
+                Hello {user?.email?.split("@")[0] || "there"}, have a great {getTimeOfDay()}!
               </h1>
               <p className="text-muted-foreground">
                 {studyStats.streak > 0 ? 
-                  `Chuỗi học liên tiếp: ${studyStats.streak} ngày. Tiếp tục phát huy!` : 
-                  "Bắt đầu chuỗi ngày học liên tiếp ngay hôm nay!"
+                  `Learning streak: ${studyStats.streak} days. Keep it up!` : 
+                  "Start your learning streak today!"
                 }
               </p>
             </div>
             <Button onClick={createNewDeck}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Tạo bộ thẻ mới
+              <PlusCircle className="mr-2 h-4 w-4" /> Create new deck
             </Button>
           </div>
 
@@ -173,13 +190,13 @@ const Dashboard: React.FC = () => {
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center text-lg">
                   <BookOpen className="mr-2 h-4 w-4 text-primary" />
-                  Thẻ đã học hôm nay
+                  Cards studied today
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-bold">{studyStats.studiedToday}</p>
                 <p className="text-muted-foreground text-sm">
-                  / {studyStats.totalCards} thẻ
+                  / {studyStats.totalCards} cards
                 </p>
               </CardContent>
             </Card>
@@ -188,13 +205,13 @@ const Dashboard: React.FC = () => {
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center text-lg">
                   <Clock className="mr-2 h-4 w-4 text-primary" />
-                  Thời gian học trung bình
+                  Average study time
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-bold">12</p>
                 <p className="text-muted-foreground text-sm">
-                  phút/ngày trong tuần này
+                  minutes/day this week
                 </p>
               </CardContent>
             </Card>
@@ -203,13 +220,13 @@ const Dashboard: React.FC = () => {
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center text-lg">
                   <Trophy className="mr-2 h-4 w-4 text-primary" />
-                  Thành tích
+                  Achievements
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-bold">{studyStats.streak}</p>
                 <p className="text-muted-foreground text-sm">
-                  ngày học liên tiếp
+                  day learning streak
                 </p>
               </CardContent>
             </Card>
@@ -221,21 +238,21 @@ const Dashboard: React.FC = () => {
           <Card className="mb-8">
             <CardHeader>
               <CardTitle className="flex items-center">
-                <BarChart3 className="mr-2 h-5 w-5" /> Tiến độ học tập
+                <BarChart3 className="mr-2 h-5 w-5" /> Study Progress
               </CardTitle>
               <CardDescription>
                 {progressPercentage < 30 
-                  ? "Hãy tiếp tục học để đạt mục tiêu hôm nay!" 
+                  ? "Keep studying to reach today's goal!" 
                   : progressPercentage < 70 
-                    ? "Bạn đang làm tốt lắm!" 
-                    : "Gần đạt mục tiêu rồi, cố lên!"}
+                    ? "You're doing great!" 
+                    : "Almost at your goal, keep going!"}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="flex justify-between text-sm">
-                  <span>Mục tiêu hôm nay</span>
-                  <span className="font-medium">{studyStats.studiedToday}/{studyStats.totalCards} thẻ</span>
+                  <span>Today's goal</span>
+                  <span className="font-medium">{studyStats.studiedToday}/{studyStats.totalCards} cards</span>
                 </div>
                 
                 <div className="w-full bg-muted rounded-full h-3">
@@ -258,12 +275,12 @@ const Dashboard: React.FC = () => {
         {/* My Decks with Search and View Options */}
         <div className="mb-4">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-            <h2 className="text-2xl font-bold">Bộ thẻ của tôi</h2>
+            <h2 className="text-2xl font-bold">My Decks</h2>
             <div className="flex items-center gap-2 w-full md:w-auto">
               <div className="relative flex-1 md:w-64">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Tìm kiếm bộ thẻ..."
+                  placeholder="Search decks..."
                   className="pl-8"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -277,8 +294,8 @@ const Dashboard: React.FC = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem>Mới nhất</DropdownMenuItem>
-                  <DropdownMenuItem>Cũ nhất</DropdownMenuItem>
+                  <DropdownMenuItem>Newest</DropdownMenuItem>
+                  <DropdownMenuItem>Oldest</DropdownMenuItem>
                   <DropdownMenuItem>A-Z</DropdownMenuItem>
                   <DropdownMenuItem>Z-A</DropdownMenuItem>
                 </DropdownMenuContent>
@@ -309,16 +326,16 @@ const Dashboard: React.FC = () => {
 
         <Tabs defaultValue="all" className="mb-6">
           <TabsList className="grid grid-cols-3">
-            <TabsTrigger value="all">Tất cả</TabsTrigger>
-            <TabsTrigger value="recent">Gần đây</TabsTrigger>
-            <TabsTrigger value="favorites">Yêu thích</TabsTrigger>
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="recent">Recent</TabsTrigger>
+            <TabsTrigger value="favorites">Favorites</TabsTrigger>
           </TabsList>
 
           <TabsContent value="all">
             {isLoading ? (
               <div className="py-8 text-center">
                 <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Đang tải bộ thẻ của bạn...</p>
+                <p className="text-muted-foreground">Loading your decks...</p>
               </div>
             ) : filteredDecks.length > 0 ? (
               <div className={viewMode === 'grid' ? "grid md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-4"}>
@@ -333,16 +350,16 @@ const Dashboard: React.FC = () => {
               </div>
             ) : searchQuery ? (
               <div className="text-center py-12">
-                <p className="text-muted-foreground mb-4">Không tìm thấy bộ thẻ khớp với "{searchQuery}"</p>
-                <Button onClick={() => setSearchQuery("")}>Xóa tìm kiếm</Button>
+                <p className="text-muted-foreground mb-4">No decks found matching "{searchQuery}"</p>
+                <Button onClick={() => setSearchQuery("")}>Clear search</Button>
               </div>
             ) : (
               <div className="text-center py-12 bg-muted/20 rounded-lg border border-dashed">
                 <BookOpen className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
-                <p className="text-muted-foreground mb-4">Bạn chưa có bộ thẻ nào</p>
+                <p className="text-muted-foreground mb-4">You don't have any decks yet</p>
                 <Button onClick={createNewDeck} className="mb-4">
                   <PlusCircle className="mr-2 h-4 w-4" />
-                  Tạo bộ thẻ đầu tiên
+                  Create your first deck
                 </Button>
               </div>
             )}
@@ -362,7 +379,7 @@ const Dashboard: React.FC = () => {
               </div>
             ) : (
               <div className="text-center py-12">
-                <p className="text-muted-foreground">Không có bộ thẻ nào được học gần đây</p>
+                <p className="text-muted-foreground">No recently studied decks</p>
               </div>
             )}
           </TabsContent>
@@ -381,9 +398,9 @@ const Dashboard: React.FC = () => {
               </div>
             ) : (
               <div className="text-center py-12">
-                <p className="text-muted-foreground">Không có bộ thẻ yêu thích</p>
+                <p className="text-muted-foreground">No favorite decks</p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Đánh dấu bộ thẻ yêu thích bằng cách nhấn vào icon ngôi sao
+                  Mark decks as favorites by clicking the star icon
                 </p>
               </div>
             )}
@@ -395,10 +412,10 @@ const Dashboard: React.FC = () => {
           <Card className="mb-8">
             <CardHeader>
               <CardTitle className="flex items-center">
-                <Calendar className="mr-2 h-5 w-5" /> Lịch học hôm nay
+                <Calendar className="mr-2 h-5 w-5" /> Today's Learning Schedule
               </CardTitle>
               <CardDescription>
-                Gợi ý các bộ thẻ cần ôn tập dựa trên thuật toán spaced repetition
+                Suggested decks to review based on spaced repetition algorithm
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -415,21 +432,21 @@ const Dashboard: React.FC = () => {
                       </div>
                       <div className="ml-3">
                         <h4 className="font-medium">{deck.title}</h4>
-                        <p className="text-sm text-muted-foreground">{deck.cardCount} thẻ</p>
+                        <p className="text-sm text-muted-foreground">{deck.cardCount} cards</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium">15 phút</p>
-                      <p className="text-xs text-muted-foreground">ôn tập</p>
+                      <p className="text-sm font-medium">15 minutes</p>
+                      <p className="text-xs text-muted-foreground">review</p>
                     </div>
                   </div>
                 ))}
               </div>
               
               <div className="mt-4 flex justify-between items-center">
-                <p className="text-sm text-muted-foreground">Dự kiến 30 phút để hoàn thành</p>
-                <Button size="sm">
-                  Học ngay
+                <p className="text-sm text-muted-foreground">Estimated 30 minutes to complete</p>
+                <Button size="sm" onClick={handleLearnNow}>
+                  Learn Now
                 </Button>
               </div>
             </CardContent>

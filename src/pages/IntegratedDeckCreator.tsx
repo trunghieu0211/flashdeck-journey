@@ -1,7 +1,7 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Eye, Save } from "lucide-react";
+import { Eye, Save, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/Layout";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -11,15 +11,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useCategories } from "@/hooks/useCategories";
 import { deckSchema, DeckFormValues } from "@/schemas/deckSchema";
+import { useNavigate } from "react-router-dom";
 import DeckDetailsForm from "@/components/deck-creator/DeckDetailsForm";
 import CardsTabContent from "@/components/deck-creator/CardsTabContent";
 
 const IntegratedDeckCreator: React.FC = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("deck");
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isPreview, setIsPreview] = useState(false);
   const [flipped, setFlipped] = useState(false);
+  const [saving, setSaving] = useState(false);
   const { data: categories = [] } = useCategories();
 
   const form = useForm<DeckFormValues>({
@@ -32,7 +35,33 @@ const IntegratedDeckCreator: React.FC = () => {
       isPublic: false,
       cards: [{ front: "", back: "", example: "", notes: "" }],
     },
+    mode: "onChange",
   });
+
+  // Get form values for autosave
+  const formValues = form.watch();
+
+  // Autosave to localStorage
+  useEffect(() => {
+    const saveTimer = setTimeout(() => {
+      localStorage.setItem('deckDraft', JSON.stringify(formValues));
+    }, 2000);
+
+    return () => clearTimeout(saveTimer);
+  }, [formValues]);
+
+  // Load draft from localStorage
+  useEffect(() => {
+    const savedDraft = localStorage.getItem('deckDraft');
+    if (savedDraft) {
+      try {
+        const parsedDraft = JSON.parse(savedDraft);
+        form.reset(parsedDraft);
+      } catch (e) {
+        console.error("Error loading draft:", e);
+      }
+    }
+  }, []);
 
   const { fields, append, remove, move } = useFieldArray({
     control: form.control,
@@ -41,6 +70,7 @@ const IntegratedDeckCreator: React.FC = () => {
 
   const onSubmit = async (values: DeckFormValues) => {
     try {
+      setSaving(true);
       // Check if user is authenticated
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -50,6 +80,7 @@ const IntegratedDeckCreator: React.FC = () => {
           description: "Please sign in to save your deck.",
           variant: "destructive",
         });
+        setSaving(false);
         return;
       }
       
@@ -89,8 +120,11 @@ const IntegratedDeckCreator: React.FC = () => {
         description: `Created "${values.title}" with ${values.cards.length} cards.`,
       });
       
+      // Clear the draft
+      localStorage.removeItem('deckDraft');
+      
       // Navigate to dashboard
-      window.location.href = "/dashboard";
+      navigate("/dashboard");
       
     } catch (error) {
       console.error("Error creating deck:", error);
@@ -99,6 +133,8 @@ const IntegratedDeckCreator: React.FC = () => {
         description: "Please try again later.",
         variant: "destructive",
       });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -147,7 +183,17 @@ const IntegratedDeckCreator: React.FC = () => {
     <Layout>
       <div className="container max-w-4xl mx-auto px-4 py-6 pb-20">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Create New Deck</h1>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => navigate("/dashboard")}
+              className="rounded-full"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-2xl font-bold">Create New Deck</h1>
+          </div>
           <div className="flex gap-2">
             <Button 
               variant="outline" 
@@ -161,9 +207,19 @@ const IntegratedDeckCreator: React.FC = () => {
               onClick={form.handleSubmit(onSubmit)}
               className={selectedColor}
               variant="secondary"
+              disabled={saving}
             >
-              <Save className="h-4 w-4 mr-2" />
-              Save Deck
+              {saving ? (
+                <>
+                  <div className="spinner h-4 w-4 mr-2 animate-spin border-2 border-white border-t-transparent rounded-full"></div>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Deck
+                </>
+              )}
             </Button>
           </div>
         </div>
