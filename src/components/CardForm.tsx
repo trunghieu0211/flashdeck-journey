@@ -18,10 +18,10 @@ import { Bold, Italic, Underline, Image, Mic } from "lucide-react";
 
 const formSchema = z.object({
   front: z.string().min(1, {
-    message: "Nội dung mặt trước là bắt buộc",
+    message: "Front content is required",
   }),
   back: z.string().min(1, {
-    message: "Nội dung mặt sau là bắt buộc",
+    message: "Back content is required",
   }),
   example: z.string().optional(),
   notes: z.string().optional(),
@@ -47,7 +47,7 @@ const CardForm: React.FC<CardFormProps> = ({ onSubmit, defaultValues }) => {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Mặt trước */}
+          {/* Front Side */}
           <div className="space-y-3">
             <FormField
               control={form.control}
@@ -55,7 +55,7 @@ const CardForm: React.FC<CardFormProps> = ({ onSubmit, defaultValues }) => {
               render={({ field }) => (
                 <FormItem>
                   <div className="flex justify-between items-center mb-2">
-                    <FormLabel className="text-base font-medium">Mặt trước</FormLabel>
+                    <FormLabel className="text-base font-medium">Front Side</FormLabel>
                     <div className="flex space-x-1">
                       <Button size="icon" variant="ghost" className="h-7 w-7">
                         <Bold className="h-3.5 w-3.5" />
@@ -70,7 +70,7 @@ const CardForm: React.FC<CardFormProps> = ({ onSubmit, defaultValues }) => {
                   </div>
                   <FormControl>
                     <Textarea 
-                      placeholder="Nhập nội dung mặt trước..." 
+                      placeholder="Enter front side content..." 
                       className="min-h-[120px] resize-none"
                       {...field} 
                     />
@@ -78,11 +78,11 @@ const CardForm: React.FC<CardFormProps> = ({ onSubmit, defaultValues }) => {
                   <div className="flex justify-end space-x-2 mt-2">
                     <Button type="button" size="sm" variant="outline" className="h-7 text-xs">
                       <Image className="h-3.5 w-3.5 mr-1" />
-                      Thêm ảnh
+                      Add Image
                     </Button>
                     <Button type="button" size="sm" variant="outline" className="h-7 text-xs">
                       <Mic className="h-3.5 w-3.5 mr-1" />
-                      Ghi âm
+                      Record Audio
                     </Button>
                   </div>
                   <FormMessage />
@@ -91,7 +91,7 @@ const CardForm: React.FC<CardFormProps> = ({ onSubmit, defaultValues }) => {
             />
           </div>
           
-          {/* Mặt sau */}
+          {/* Back Side */}
           <div className="space-y-3">
             <FormField
               control={form.control}
@@ -99,7 +99,7 @@ const CardForm: React.FC<CardFormProps> = ({ onSubmit, defaultValues }) => {
               render={({ field }) => (
                 <FormItem>
                   <div className="flex justify-between items-center mb-2">
-                    <FormLabel className="text-base font-medium">Mặt sau</FormLabel>
+                    <FormLabel className="text-base font-medium">Back Side</FormLabel>
                     <div className="flex space-x-1">
                       <Button size="icon" variant="ghost" className="h-7 w-7">
                         <Bold className="h-3.5 w-3.5" />
@@ -114,7 +114,7 @@ const CardForm: React.FC<CardFormProps> = ({ onSubmit, defaultValues }) => {
                   </div>
                   <FormControl>
                     <Textarea 
-                      placeholder="Nhập nội dung mặt sau..." 
+                      placeholder="Enter back side content..." 
                       className="min-h-[120px] resize-none"
                       {...field} 
                     />
@@ -122,11 +122,11 @@ const CardForm: React.FC<CardFormProps> = ({ onSubmit, defaultValues }) => {
                   <div className="flex justify-end space-x-2 mt-2">
                     <Button type="button" size="sm" variant="outline" className="h-7 text-xs">
                       <Image className="h-3.5 w-3.5 mr-1" />
-                      Thêm ảnh
+                      Add Image
                     </Button>
                     <Button type="button" size="sm" variant="outline" className="h-7 text-xs">
                       <Mic className="h-3.5 w-3.5 mr-1" />
-                      Ghi âm
+                      Record Audio
                     </Button>
                   </div>
                   <FormMessage />
@@ -141,9 +141,9 @@ const CardForm: React.FC<CardFormProps> = ({ onSubmit, defaultValues }) => {
           name="example"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Ví dụ (tùy chọn)</FormLabel>
+              <FormLabel>Example (optional)</FormLabel>
               <FormControl>
-                <Input placeholder="Nhập một ví dụ..." {...field} />
+                <Input placeholder="Enter an example..." {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -155,10 +155,10 @@ const CardForm: React.FC<CardFormProps> = ({ onSubmit, defaultValues }) => {
           name="notes"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Ghi chú (tùy chọn)</FormLabel>
+              <FormLabel>Notes (optional)</FormLabel>
               <FormControl>
                 <Textarea 
-                  placeholder="Thêm ghi chú, mẹo nhớ..." 
+                  placeholder="Add notes, memory tips..." 
                   rows={2}
                   {...field} 
                 />
@@ -169,7 +169,7 @@ const CardForm: React.FC<CardFormProps> = ({ onSubmit, defaultValues }) => {
         />
 
         <Button type="submit" className="w-full">
-          Lưu thẻ
+          Save Card
         </Button>
       </form>
     </Form>

@@ -1,6 +1,5 @@
 
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -24,8 +23,7 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-  // Get navigate directly from props instead of using the hook
-  // This way Layout doesn't need to use useNavigate directly
+  // Get user and signOut function from our auth hook
   const { user, signOut } = useAuth();
   
   const handleNavigation = (path: string) => {
@@ -42,7 +40,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <header className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center">
-            <Link to="/dashboard" className="font-bold text-xl">FlashDeck</Link>
+            <a href="/dashboard" className="font-bold text-xl">FlashDeck</a>
           </div>
           <div className="flex items-center gap-2">
             {user ? (

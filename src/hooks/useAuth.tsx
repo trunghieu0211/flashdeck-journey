@@ -1,6 +1,6 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -23,7 +23,6 @@ interface AuthContextProps {
 const AuthContext = createContext<AuthContextProps | null>(null);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -54,7 +53,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             
             // Wait a moment to allow the auth state to update
             setTimeout(() => {
-              navigate("/dashboard");
+              window.location.href = "/dashboard";
             }, 500);
           }
         } catch (error) {
@@ -69,7 +68,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
     
     handleAuthRedirect();
-  }, [navigate, location]);
+  }, [location]);
 
   useEffect(() => {
     // Set up auth state listener FIRST
